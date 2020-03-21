@@ -1,0 +1,61 @@
+---
+# Run checks first, then use gitlab pages feature to generate a badge that we
+# can display in the pmaports project
+
+image: alpine:latest
+stages:
+  - check
+  - badge
+
+.only-default: &only-default
+  only:
+    - master
+    - merge_requests
+    - tags
+
+mr-settings:
+  stage: check
+  only:
+    - merge_requests
+  before_script:
+    - apk -q add python3
+  script:
+    - wget -q "https://gitlab.com/postmarketOS/ci-common/-/raw/master/check_mr_settings.py"
+    - python3 ./check_mr_settings.py
+
+flake8:
+  stage: check
+  <<: *only-default
+  image: "alpine:latest"
+  before_script:
+  - "apk -q add py3-pip"
+  - "pip3 -q --disable-pip-version-check install flake8"
+  script:
+  - ".ci/flake8.sh"
+
+upstream-compat:
+  stage: check
+  <<: *only-default
+  allow_failure: true
+  script:
+  - wget "https://gitlab.com/postmarketOS/ci-common/-/raw/master/install_pmbootstrap.sh"
+  - sh ./install_pmbootstrap.sh pytest
+  - ln -s /tmp/pmbootstrap/pmb .
+  - export PMAPORTS="/home/pmos/.local/var/pmbootstrap/cache_git/pmaports"
+  - pytest -vv test_upstream_compat.py
+  - touch upstream-compat.check-passed
+  artifacts:
+    when: always
+    paths:
+    - "*.check-passed"
+
+pages:
+  stage: badge
+  <<: *only-default
+  image: alpine:latest
+  script:
+  - ls -R .
+  - .ci/generate_page.sh
+  artifacts:
+    paths:
+    - public
