@@ -33,21 +33,27 @@ flake8:
   script:
   - ".ci/flake8.sh"
 
-upstream-compat:
+upstream-compat-master:
   stage: check
   <<: *only-default
   allow_failure: true
   script:
-  - wget "https://gitlab.com/postmarketOS/ci-common/-/raw/master/install_pmbootstrap.sh"
-  - sh ./install_pmbootstrap.sh pytest
-  - ln -s /tmp/pmbootstrap/pmb .
-  - export PMAPORTS="/home/pmos/.local/var/pmbootstrap/cache_git/pmaports"
-  - pytest -vv test_upstream_compat.py
-  - touch upstream-compat.check-passed
+  - ./test_upstream_compat_setup.sh "master"
   artifacts:
     when: always
     paths:
     - "*.check-passed"
+
+upstream-compat-v20.05:
+  stage: check
+  <<: *only-default
+  allow_failure: true
+  script:
+  - ./test_upstream_compat_setup.sh "v20.05"
+  artifacts:
+    when: always
+    paths:
+      - "*.check-passed"
 
 pages:
   stage: badge
